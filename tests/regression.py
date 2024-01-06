@@ -41,7 +41,7 @@ for case in os.listdir(TEST_CASE_DIRECTORY):
     exitcode, out, err = get_exitcode_stdout_stderr(args.zydis_info_path, payload)
 
     pre, ext = os.path.splitext(case)
-    path = os.path.join(TEST_CASE_DIRECTORY, pre + ".out")
+    path = os.path.join(TEST_CASE_DIRECTORY, f"{pre}.out")
 
     if args.operation == "rebase":
         with open(path, mode="wb") as f:
