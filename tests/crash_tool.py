@@ -21,11 +21,13 @@ def get_width_from_enum(enum_value):
 
 def get_enum_max(enum_class):
     if issubclass(enum_class, IntEnum):
-        return max([v.value for v in enum_class])
+        return max(v.value for v in enum_class)
     elif issubclass(enum_class, IntFlag):
         return functools.reduce(lambda x, y: x | y, [v.value for v in enum_class])
     else:
-        raise RuntimeError('Invalid type passed to get_enum_max: ' + enum_class.__name__)
+        raise RuntimeError(
+            f'Invalid type passed to get_enum_max: {enum_class.__name__}'
+        )
 
 
 def get_sanitized_enum(reader, enum_class):
@@ -35,15 +37,15 @@ def get_sanitized_enum(reader, enum_class):
     elif issubclass(enum_class, IntFlag):
         return enum_class(raw_value & get_enum_max(enum_class))
     else:
-        raise RuntimeError('Invalid type passed to get_sanitized_enum: ' + enum_class.__name__)
+        raise RuntimeError(
+            f'Invalid type passed to get_sanitized_enum: {enum_class.__name__}'
+        )
 
 
 def get_decomposed_flags(combined_flags):
     enum_class = type(combined_flags)
     flag_str = '|'.join([v.name for v in enum_class if v in combined_flags and v.value != 0])
-    if flag_str == '':
-        return enum_class(0).name
-    return flag_str
+    return enum_class(0).name if not flag_str else flag_str
 
 
 def get_combined_flags(flag_str, enum_class):
@@ -53,8 +55,8 @@ def get_combined_flags(flag_str, enum_class):
 def get_disasm(zydis_info, machine_mode, stack_width, payload):
     if not zydis_info:
         return ''
-    arg_machine_mode = '-' + get_width_from_enum(machine_mode)
-    arg_stack_width = '-' + get_width_from_enum(stack_width)
+    arg_machine_mode = f'-{get_width_from_enum(machine_mode)}'
+    arg_stack_width = f'-{get_width_from_enum(stack_width)}'
     proc = Popen([zydis_info, arg_machine_mode, arg_stack_width, payload[:30]], stdout=PIPE, stderr=PIPE)
     out = proc.communicate()[0].decode('utf-8')
     if proc.returncode != 0:
@@ -122,7 +124,7 @@ def convert_enc_crash_to_json(crash, return_dict=False):
                 'value': str(imm)
             }
         else:
-            raise RuntimeError('Invalid operand type: ' + op_type.name)
+            raise RuntimeError(f'Invalid operand type: {op_type.name}')
         operands.append(op)
     evex_broadcast = get_sanitized_enum(reader, ZydisBroadcastMode)
     evex_rounding = get_sanitized_enum(reader, ZydisRoundingMode)
@@ -161,9 +163,7 @@ def convert_enc_crash_to_json(crash, return_dict=False):
             'eviction_hint': mvex_eviction_hint,
         },
     }
-    if return_dict:
-        return test_case
-    return to_json(test_case)
+    return test_case if return_dict else to_json(test_case)
 
 
 def convert_re_enc_crash_to_json(crash, zydis_info, return_dict=False):
@@ -177,16 +177,11 @@ def convert_re_enc_crash_to_json(crash, zydis_info, return_dict=False):
         'payload': payload,
         'description': get_disasm(zydis_info, machine_mode, stack_width, payload),
     }
-    if return_dict:
-        return test_case
-    return to_json(test_case)
+    return test_case if return_dict else to_json(test_case)
 
 
 def convert_enc_json_to_crash(test_case_json, from_dict=False):
-    if from_dict:
-        test_case = test_case_json
-    else:
-        test_case = json.loads(test_case_json)
+    test_case = test_case_json if from_dict else json.loads(test_case_json)
     writer = BinaryWriter()
     writer.write_uint32(ZydisMachineMode[test_case['machine_mode']])
     writer.write_uint32(get_combined_flags(test_case['allowed_encodings'], ZydisEncodableEncoding))
@@ -233,7 +228,7 @@ def convert_enc_json_to_crash(test_case_json, from_dict=False):
             writer.write_padding(52)
             writer.write_uint64(int(op['imm']['value']))
         else:
-            raise RuntimeError('Invalid operand type: ' + op_type.name)
+            raise RuntimeError(f'Invalid operand type: {op_type.name}')
     writer.write_uint32(ZydisBroadcastMode[test_case['evex']['broadcast']])
     writer.write_uint32(ZydisRoundingMode[test_case['evex']['rounding']])
     writer.write_uint8(int(test_case['evex']['sae']))
@@ -250,10 +245,7 @@ def convert_enc_json_to_crash(test_case_json, from_dict=False):
 
 
 def convert_re_enc_json_to_crash(test_case_json, from_dict=False):
-    if from_dict:
-        test_case = test_case_json
-    else:
-        test_case = json.loads(test_case_json)
+    test_case = test_case_json if from_dict else json.loads(test_case_json)
     writer = BinaryWriter()
     writer.write_uint32(ZydisMachineMode[test_case['machine_mode']])
     writer.write_uint32(ZydisStackWidth[test_case['stack_width']])

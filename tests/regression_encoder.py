@@ -21,7 +21,7 @@ def run_test_collection(test_db_file, binary, converter):
             description += case['description']
         else:
             description += case['mnemonic'][case['mnemonic'].rfind('_') + 1:].lower()
-        print('[%s] %s' % ('PASSED' if test_result else 'FAILED', description))
+        print(f"[{'PASSED' if test_result else 'FAILED'}] {description}")
     return tests_passed
 
 
